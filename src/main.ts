@@ -1,49 +1,39 @@
 import "./style.scss";
 import { Plugin } from "@typora-community-plugin/core";
+import { FolderNode } from "./FolderNode";
+
+function getFolderNodeFromTarget(target: HTMLElement): HTMLElement | null {
+  if (!target) return null;
+
+  // Проверяем, что клик был внутри панели библиотеки файлов
+  if (!target.closest("#file-library-tree")) return null;
+
+  // Ищем ближайший узел файла или папки
+  const node = target.closest(".file-library-node") as HTMLElement | null;
+  if (!node) return null;
+
+  // Проверяем, что это папка
+  if (node.getAttribute("data-is-directory") !== "true") return null;
+
+  if (node.closest(".file-node-open-state")) return null;
+
+  return node;
+}
 
 export default class FolderNotesDebug extends Plugin {
   private onClick = (e: MouseEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-
-    // Только клики внутри file tree
-    if (!target.closest("#file-library-tree")) return;
-
-    // Папка = file-library-node с data-is-directory="true"
-    const folderNode = target.closest(".file-library-node") as HTMLElement | null;
+    const folderNode = getFolderNodeFromTarget(e.target as HTMLElement);
     if (!folderNode) return;
 
-    if (folderNode.getAttribute("data-is-directory") !== "true") return;
+    // Ключ по которому можно найти узел папки
+    const FOLDER_NODE_PATH = folderNode.getAttribute("data-path")!;
 
-    // 1) Разрешаем дефолтное поведение для стрелки и иконки
-    if (target.closest(".file-node-open-state")) return;
-    if (target.closest(".file-node-icon")) return;
-
-    // 2) Нас интересует только клик по названию
-    const titleEl = target.closest(".file-node-title");
-    if (!titleEl) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    // контейнер детей папки
-    const childrenEl = folderNode.querySelector(".file-node-children");
-    if (!childrenEl) return;
-
-    console.log("childrenEl:", childrenEl);
-    const fileNode = Array.from(
-      childrenEl.querySelectorAll('.file-library-node[data-is-directory="false"][data-path]'),
-    ).find((n) => (n.getAttribute("data-path") || "").toLowerCase().endsWith("\\index.md"));
-
-    if (fileNode) {
-      const fileTitle = fileNode.querySelector<HTMLElement>(".file-node-title");
-      fileTitle?.click();
-    }
+    const folder = new FolderNode(FOLDER_NODE_PATH);
+    folder.expandAndOpenFirstMd();
   };
 
   onload() {
     console.log("[folder-notes] loaded");
-    // capture=true — чтобы отлавливать раньше встроенных обработчиков Typora
     document.addEventListener("click", this.onClick, true);
   }
 
