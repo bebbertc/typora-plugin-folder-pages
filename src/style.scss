@@ -1,3 +1,17 @@
-.typ-example-cls {
-  color: red;
+#file-library-tree {
+  .file-node-open-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+
+    cursor: pointer;
+  }
+
+  .file-node-open-state > i {
+    pointer-events: none; // кликаем всегда по span, не по i
+  }
 }
