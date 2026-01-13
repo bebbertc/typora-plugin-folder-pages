@@ -1,6 +1,8 @@
 type Path = string;
 
 export class FolderNode {
+  private opening = false;
+
   constructor(private readonly path: Path) {}
 
   private clickElement(el: HTMLElement): void {
@@ -42,6 +44,7 @@ export class FolderNode {
 
   openFirstMdFile(): boolean {
     const firstMdNode = this.getFirstMdFileNode();
+    console.log(firstMdNode, "!!!!!!!!");
     if (!firstMdNode) return false;
 
     const title =
@@ -51,7 +54,6 @@ export class FolderNode {
     return true;
   }
 
-  /** Ждём, когда папка станет expanded (DOM может перерисоваться, поэтому проверяем по path) */
   waitExpanded(): Promise<void> {
     if (this.isExpanded()) return Promise.resolve();
 
@@ -66,7 +68,15 @@ export class FolderNode {
         }
       });
 
-      obs.observe(root, { attributes: true, subtree: true, attributeFilter: ["class"] });
+      obs.observe(root, {
+        subtree: true,
+        // Typora может:
+        // 1) поменять class на существующей ноде (attributes)
+        // 2) пересоздать ноду папки целиком (childList)
+        attributes: true,
+        attributeFilter: ["class"],
+        childList: true,
+      });
     });
   }
 
@@ -89,21 +99,20 @@ export class FolderNode {
     });
   }
 
-  /** Раскрыть папку (если нужно) и открыть первый md, без таймаутов */
   async expandAndOpenFirstMd(): Promise<void> {
-    // 1) если не раскрыта — кликаем по экспандеру
-    if (!this.isExpanded()) {
-      const expander = this.expander();
-      if (expander) this.clickElement(expander);
+    if (this.opening) return;
+    this.opening = true;
+    try {
+      if (!this.isExpanded()) {
+        const expander = this.expander();
+        if (expander) this.clickElement(expander);
+      }
+
+      await this.waitExpanded();
+      await this.waitFirstMdFile();
+      this.openFirstMdFile();
+    } finally {
+      this.opening = false;
     }
-
-    // 2) ждём, пока реально станет expanded
-    await this.waitExpanded();
-
-    // 3) ждём, пока дорендерится md
-    await this.waitFirstMdFile();
-
-    // 4) открываем
-    this.openFirstMdFile();
   }
 }

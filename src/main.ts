@@ -27,22 +27,25 @@ export default class FolderNotesDebug extends Plugin {
     // Игнорируем не пользовательские события
     if (!e.isTrusted) return;
 
-    const folderNode = getFolderNodeFromTarget(e.target as HTMLElement);
+    const target = e.target as HTMLElement;
+    const folderNode = getFolderNodeFromTarget(target);
     if (!folderNode) return;
 
-    // Ключ по которому можно найти узел папки
-    const FOLDER_NODE_PATH = folderNode.getAttribute("data-path")!;
+    // ⚠️ ВАЖНО: мы забираем клик себе, Typora не должна делать toggle сама
+    e.preventDefault();
+    e.stopPropagation();
+    // иногда надо жёстче, чтобы Typora не получила клик вообще
+    // (в capture это часто решает “пропадающую стрелку”)
+    (e as any).stopImmediatePropagation?.();
 
+    const FOLDER_NODE_PATH = folderNode.getAttribute("data-path")!;
     const folder = new FolderNode(FOLDER_NODE_PATH);
-    folder.expandAndOpenFirstMd();
+    void folder.expandAndOpenFirstMd();
   };
 
   onload() {
-    console.log("[folder-notes] loaded");
+    // capture оставляем, но теперь мы гасим событие
     document.addEventListener("click", this.onClick, true);
-
-    const notionTree = new NotionTreeMode();
-    notionTree.start();
   }
 
   onunload() {
