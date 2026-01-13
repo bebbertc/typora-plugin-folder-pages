@@ -31,11 +31,9 @@ export default class FolderNotesDebug extends Plugin {
     const folderNode = getFolderNodeFromTarget(target);
     if (!folderNode) return;
 
-    // ⚠️ ВАЖНО: мы забираем клик себе, Typora не должна делать toggle сама
+    // ⚠️ ВАЖНО: мы забираем клик себе, Typora не должна делать toggle сама, никакие другие события не должны сработать
     e.preventDefault();
     e.stopPropagation();
-    // иногда надо жёстче, чтобы Typora не получила клик вообще
-    // (в capture это часто решает “пропадающую стрелку”)
     (e as any).stopImmediatePropagation?.();
 
     const FOLDER_NODE_PATH = folderNode.getAttribute("data-path")!;
@@ -46,6 +44,8 @@ export default class FolderNotesDebug extends Plugin {
   onload() {
     // capture оставляем, но теперь мы гасим событие
     document.addEventListener("click", this.onClick, true);
+    // const notionTreeMode = new NotionTreeMode();
+    // notionTreeMode.start();
   }
 
   onunload() {

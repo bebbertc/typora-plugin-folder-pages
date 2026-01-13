@@ -38,13 +38,12 @@ export class FolderNode {
     if (!children) return null;
 
     return children.querySelector(
-      '.file-library-node[data-is-directory="false"]',
+      ':scope > .file-library-node[data-is-directory="false"]',
     ) as HTMLElement | null;
   }
 
   openFirstMdFile(): boolean {
     const firstMdNode = this.getFirstMdFileNode();
-    console.log(firstMdNode, "!!!!!!!!");
     if (!firstMdNode) return false;
 
     const title =
