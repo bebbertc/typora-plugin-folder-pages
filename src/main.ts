@@ -44,8 +44,8 @@ export default class FolderNotesDebug extends Plugin {
   onload() {
     // capture оставляем, но теперь мы гасим событие
     document.addEventListener("click", this.onClick, true);
-    // const notionTreeMode = new NotionTreeMode();
-    // notionTreeMode.start();
+    const notionTreeMode = new NotionTreeMode();
+    notionTreeMode.start();
   }
 
   onunload() {

@@ -48,27 +48,30 @@ export class NotionTreeMode {
     const folders = Array.from(tree.querySelectorAll<HTMLElement>(".file-library-node")).filter(
       (folderEl: HTMLElement) => nodeIsFolder(folderEl),
     );
-    console.log(folders, "!!!!!!!!!!!!!!");
     folders.forEach((folder) => this.applyToFolder(folder));
   }
 
   private applyToFolder(folderEl: HTMLElement) {
-    const children = folderEl.querySelector<HTMLElement>(".file-node-children");
-    console.log(children, "???????????????");
-    if (!children) return;
+    const childrenNode = folderEl.querySelector<HTMLElement>(".file-node-children");
+    if (!childrenNode) return;
 
-    // 1) Скрываем ВСЕ файлы (включая index.md) — без проверок имени
-    children
-      .querySelectorAll<HTMLElement>(".file-node.file-node-file")
-      .forEach((el) => (el.style.display = "none"));
+    const notFoldersArray = Array.from(
+      childrenNode.querySelectorAll(':scope > .file-library-node[data-is-directory="false"]'),
+    );
+    // 1) Скрываем все файлы внутри папки
+    notFoldersArray.forEach((el: HTMLElement) => {
+      // Скрываем файл
+      el.style.display = "none";
+    });
 
-    // 2) Оставляем только папки, но папку assets — скрываем
-    children.querySelectorAll<HTMLElement>(".file-node.file-node-folder").forEach((el) => {
-      const title = el.querySelector<HTMLElement>(".file-node-title")?.textContent?.trim() ?? "";
-      if (title === "assets") {
-        el.style.display = "none";
-      } else {
-        el.style.display = "";
+    const foldersArray = Array.from(
+      childrenNode.querySelectorAll(':scope > .file-library-node[data-is-directory="true"]'),
+    );
+    foldersArray.forEach((folder: HTMLElement) => {
+      const folderTitle = folder.querySelector(".file-node-title-name-part");
+      const tittle = folderTitle?.textContent?.trim() || "Unnamed";
+      if (tittle === "assets") {
+        folder.style.display = "none";
       }
     });
   }
