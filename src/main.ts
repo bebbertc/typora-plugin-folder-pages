@@ -1,6 +1,7 @@
 import "./style.scss";
 import { Plugin } from "@typora-community-plugin/core";
 import { FolderNode } from "./FolderNode";
+import { nodeIsFolder, NotionTreeMode } from "./NotionTreeMode";
 
 function getFolderNodeFromTarget(target: HTMLElement): HTMLElement | null {
   if (!target) return null;
@@ -13,15 +14,19 @@ function getFolderNodeFromTarget(target: HTMLElement): HTMLElement | null {
   if (!node) return null;
 
   // Проверяем, что это папка
-  if (node.getAttribute("data-is-directory") !== "true") return null;
+  if (!nodeIsFolder(node)) return null;
 
-  if (node.closest(".file-node-open-state")) return null;
+  // Исключаем стрелку раскрытия/сворачивания
+  if (target.closest(".file-node-open-state")) return null;
 
   return node;
 }
 
 export default class FolderNotesDebug extends Plugin {
   private onClick = (e: MouseEvent) => {
+    // Игнорируем не пользовательские события
+    if (!e.isTrusted) return;
+
     const folderNode = getFolderNodeFromTarget(e.target as HTMLElement);
     if (!folderNode) return;
 
@@ -35,6 +40,9 @@ export default class FolderNotesDebug extends Plugin {
   onload() {
     console.log("[folder-notes] loaded");
     document.addEventListener("click", this.onClick, true);
+
+    const notionTree = new NotionTreeMode();
+    notionTree.start();
   }
 
   onunload() {
