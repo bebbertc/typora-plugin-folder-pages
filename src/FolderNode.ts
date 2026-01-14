@@ -168,6 +168,10 @@ export class FolderNode {
   }
 
   async expandAndOpenFirstMd(): Promise<void> {
+    if (this.folderName === "assets") {
+      return;
+    }
+
     if (this.opening) return;
     this.opening = true;
     try {
