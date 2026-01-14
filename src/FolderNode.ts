@@ -159,18 +159,19 @@ export class FolderNode {
     const expander = this.expander();
     if (!expander) return false;
 
-    const right = expander.querySelector(".fa-caret-right") as HTMLElement | null;
-    if (!right) return false;
+    // caret может быть right (свернута) или down (раскрыта)
+    const caret = expander.querySelector(".fa-caret-right, .fa-caret-down") as HTMLElement | null;
+    if (!caret) return false;
 
-    const isEmptyFolder = getComputedStyle(right).display === "none";
-    return !isEmptyFolder;
+    // пустая папка: caret есть, но скрыт (display:none)
+    return getComputedStyle(caret).display !== "none";
   }
 
   async expandAndOpenFirstMd(): Promise<void> {
     if (this.opening) return;
     this.opening = true;
     try {
-      if (!this.isExpandable()) {
+      if (!this.isExpandable() && !this.isExpanded()) {
         this.createIndexMdIfMissing();
         await this.waitArrowRight();
       }
