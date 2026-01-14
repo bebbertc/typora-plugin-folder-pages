@@ -39,8 +39,11 @@ function setObserver(
 
 export class FolderNode {
   private opening = false;
+  private folderName: string | null = null;
 
-  constructor(private readonly path: Path) {}
+  constructor(private readonly folderPath: Path) {
+    this.folderName = path.basename(this.folderPath);
+  }
 
   private clickElement(el: HTMLElement): void {
     el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
@@ -54,7 +57,7 @@ export class FolderNode {
 
   get(): HTMLElement | null {
     return document.querySelector(
-      `.file-library-node[data-path="${CSS.escape(this.path)}"]`,
+      `.file-library-node[data-path="${CSS.escape(this.folderPath)}"]`,
     ) as HTMLElement | null;
   }
 
@@ -140,7 +143,7 @@ export class FolderNode {
   }
 
   private getIndexPath(): string {
-    return path.join(this.path, "index.md");
+    return path.join(this.folderPath, `${this.folderName}.md`);
   }
 
   createIndexMdIfMissing(): boolean {
