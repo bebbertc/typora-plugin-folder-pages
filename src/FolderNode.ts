@@ -1,3 +1,6 @@
+import * as path from "path";
+import * as fs from "fs";
+
 type Path = string;
 
 export class FolderNode {
@@ -53,6 +56,29 @@ export class FolderNode {
     return true;
   }
 
+  waitArrowRight(): Promise<void> {
+    if (this.isExpandable()) return Promise.resolve();
+
+    const root = this.treeRoot();
+    if (!root) return Promise.reject(new Error("file tree root not found"));
+
+    return new Promise((resolve) => {
+      const obs = new MutationObserver(() => {
+        if (this.isExpandable()) {
+          obs.disconnect();
+          resolve();
+        }
+      });
+
+      obs.observe(root, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["class", "style"],
+      });
+    });
+  }
+
   waitExpanded(): Promise<void> {
     if (this.isExpanded()) return Promise.resolve();
 
@@ -79,36 +105,46 @@ export class FolderNode {
     });
   }
 
-  /** Ждём, когда внутри появится md-файл */
-  waitFirstMdFile(): Promise<void> {
-    if (this.getFirstMdFileNode()) return Promise.resolve();
+  private getIndexPath(): string {
+    return path.join(this.path, "index.md");
+  }
 
-    const root = this.treeRoot();
-    if (!root) return Promise.reject(new Error("file tree root not found"));
+  createIndexMdIfMissing(): boolean {
+    const indexPath = this.getIndexPath();
 
-    return new Promise((resolve) => {
-      const obs = new MutationObserver(() => {
-        if (this.getFirstMdFileNode()) {
-          obs.disconnect();
-          resolve();
-        }
-      });
+    if (fs.existsSync(indexPath)) return false; // уже есть
 
-      obs.observe(root, { childList: true, subtree: true });
-    });
+    fs.writeFileSync(indexPath, "", "utf8"); // или шаблон
+    return true; // создан
+  }
+
+  isExpandable(): boolean {
+    const expander = this.expander();
+    if (!expander) return false;
+
+    const right = expander.querySelector(".fa-caret-right") as HTMLElement | null;
+    if (!right) return false;
+
+    const isEmptyFolder = getComputedStyle(right).display === "none";
+    return !isEmptyFolder;
   }
 
   async expandAndOpenFirstMd(): Promise<void> {
     if (this.opening) return;
     this.opening = true;
     try {
+      if (!this.isExpandable()) {
+        this.createIndexMdIfMissing();
+        await this.waitArrowRight();
+      }
+
       if (!this.isExpanded()) {
         const expander = this.expander();
         if (expander) this.clickElement(expander);
       }
 
       await this.waitExpanded();
-      await this.waitFirstMdFile();
+
       this.openFirstMdFile();
     } finally {
       this.opening = false;
