@@ -6,29 +6,45 @@ export class NotionTreeMode {
   private rootSelector = "#file-library-tree";
   private raf = 0;
 
+  private mo: MutationObserver | null = null;
+  private docMo: MutationObserver | null = null;
+  private started = false;
+
   start() {
-    this.applyAll(); // первый прогон
+    if (this.started) return;
+    this.started = true;
+
+    this.applyAll();
 
     const root = document.querySelector<HTMLElement>(this.rootSelector);
     if (!root) return;
 
-    const mo = new MutationObserver(() => this.scheduleApply());
-    mo.observe(root, {
+    this.mo = new MutationObserver(() => this.scheduleApply());
+    this.mo.observe(root, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ["class"],
     });
 
-    // на всякий случай — если Typora пересоздаёт root целиком
-    // (можно убрать, если лишнее)
-    const docMo = new MutationObserver(() => {
+    this.docMo = new MutationObserver(() => {
       const nextRoot = document.querySelector<HTMLElement>(this.rootSelector);
-      if (nextRoot && nextRoot !== root) {
-        this.scheduleApply();
-      }
+      if (nextRoot && nextRoot !== root) this.scheduleApply();
     });
-    docMo.observe(document.body, { childList: true, subtree: true });
+    this.docMo.observe(document.body, { childList: true, subtree: true });
+  }
+
+  stop() {
+    this.started = false;
+
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0;
+
+    this.mo?.disconnect();
+    this.mo = null;
+
+    this.docMo?.disconnect();
+    this.docMo = null;
   }
 
   private scheduleApply() {

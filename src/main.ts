@@ -4,7 +4,7 @@ import { FolderNode } from "./FolderNode";
 import { nodeIsFolder, NotionTreeMode } from "./NotionTreeMode";
 
 export default class FolderNotesDebug extends Plugin {
-  private NOTION_TREE_MODE_ON = false;
+  private NOTION_TREE_MODE_ON = true;
 
   getFolderNodeFromTarget(target: HTMLElement): HTMLElement | null {
     if (!target) return null;
