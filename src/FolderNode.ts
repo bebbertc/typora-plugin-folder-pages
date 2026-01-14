@@ -3,6 +3,40 @@ import * as fs from "fs";
 
 type Path = string;
 
+function setObserver(
+  root: Node,
+  callback: (obs: MutationObserver, resolve: () => void, reject: (reason: any) => void) => void,
+  options?: MutationObserverInit | undefined,
+  timeoutMs: number = 5000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const obs = new MutationObserver(() => {
+      callback(obs, doneResolve, doneReject);
+    });
+
+    const timer = setTimeout(() => {
+      doneReject(new Error("setObserver timeout"));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(timer);
+      obs.disconnect();
+    }
+
+    function doneResolve() {
+      cleanup();
+      resolve();
+    }
+
+    function doneReject(reason: any) {
+      cleanup();
+      reject(reason);
+    }
+
+    obs.observe(root, options);
+  });
+}
+
 export class FolderNode {
   private opening = false;
 
@@ -62,21 +96,21 @@ export class FolderNode {
     const root = this.treeRoot();
     if (!root) return Promise.reject(new Error("file tree root not found"));
 
-    return new Promise((resolve) => {
-      const obs = new MutationObserver(() => {
+    return setObserver(
+      root,
+      (obs, resolve) => {
         if (this.isExpandable()) {
           obs.disconnect();
           resolve();
         }
-      });
-
-      obs.observe(root, {
+      },
+      {
         subtree: true,
         childList: true,
         attributes: true,
         attributeFilter: ["class", "style"],
-      });
-    });
+      },
+    );
   }
 
   waitExpanded(): Promise<void> {
@@ -85,15 +119,15 @@ export class FolderNode {
     const root = this.treeRoot();
     if (!root) return Promise.reject(new Error("file tree root not found"));
 
-    return new Promise((resolve) => {
-      const obs = new MutationObserver(() => {
+    return setObserver(
+      root,
+      (obs, resolve) => {
         if (this.isExpanded()) {
           obs.disconnect();
           resolve();
         }
-      });
-
-      obs.observe(root, {
+      },
+      {
         subtree: true,
         // Typora может:
         // 1) поменять class на существующей ноде (attributes)
@@ -101,8 +135,8 @@ export class FolderNode {
         attributes: true,
         attributeFilter: ["class"],
         childList: true,
-      });
-    });
+      },
+    );
   }
 
   private getIndexPath(): string {
