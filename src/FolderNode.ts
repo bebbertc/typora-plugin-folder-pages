@@ -3,6 +3,33 @@ import * as fs from "fs";
 
 type Path = string;
 
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let cur: HTMLElement | null = el;
+  while (cur) {
+    const style = getComputedStyle(cur);
+    const overflowY = style.overflowY;
+    const isScrollable =
+      (overflowY === "auto" || overflowY === "scroll") && cur.scrollHeight > cur.clientHeight;
+
+    if (isScrollable) return cur;
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
+function restoreScroll(scrollEl: HTMLElement, top: number) {
+  // Typora может сбросить scroll несколько раз подряд — восстанавливаем несколько кадров
+  let frames = 0;
+
+  const tick = () => {
+    scrollEl.scrollTop = top;
+    frames += 1;
+    if (frames < 10) requestAnimationFrame(tick);
+  };
+
+  requestAnimationFrame(tick);
+}
+
 function setObserver(
   root: Node,
   callback: (obs: MutationObserver, resolve: () => void, reject: (reason: any) => void) => void,
@@ -89,7 +116,16 @@ export class FolderNode {
     const title =
       (firstMdNode.querySelector(".file-node-title") as HTMLElement | null) ?? firstMdNode;
 
+    // ✅ сохраняем scroll контейнера дерева
+    const tree = this.treeRoot();
+    const scrollEl = findScrollParent(tree);
+    const top = scrollEl?.scrollTop ?? 0;
+
     this.clickElement(title);
+
+    // ✅ восстанавливаем scroll после открытия/перерендера
+    if (scrollEl) restoreScroll(scrollEl, top);
+
     return true;
   }
 
