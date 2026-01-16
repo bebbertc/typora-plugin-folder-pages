@@ -33,7 +33,7 @@ export class NotionTreeMode {
       attributeFilter: ["class"],
     });
 
-    // на всякий случай — если Typora пересоздаёт root целиком
+    // Страховочный Observer на всякий случай — если Typora пересоздаёт root целиком
     this.docMo = new MutationObserver(() => {
       const nextRoot = document.querySelector<HTMLElement>(this.rootSelector);
       if (nextRoot && nextRoot !== root) this.scheduleApply();
