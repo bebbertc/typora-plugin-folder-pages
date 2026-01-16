@@ -56,7 +56,6 @@ export class TreeScrollKeeper {
 
     let frames = 0;
     const tick = () => {
-      // если начался новый restore — этот прекращаем
       if (token !== this.restoreToken) return;
 
       scrollEl.scrollTop = top;
@@ -65,7 +64,6 @@ export class TreeScrollKeeper {
       if (frames < 10) {
         requestAnimationFrame(tick);
       } else {
-        // отпускаем блокировку
         this.isRestoring = false;
       }
     };
@@ -130,18 +128,14 @@ export class TreeScrollKeeper {
     if (!this.started) return;
     this.started = false;
 
-    // observer на ribbon
     this.observer?.disconnect();
     this.observer = null;
 
-    // raf из scheduleSync()
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
 
-    // scroll listener + его raf
     this.detachTreeScrollListener();
 
-    // вот оно — снимаем подписку на mode-change
     this.unsubscribeModeChange?.();
     this.unsubscribeModeChange = null;
 
@@ -206,29 +200,22 @@ export class TreeScrollKeeper {
     const el = this.treeScrollEl;
     if (!el) return;
 
-    // ❗ если мы сами сейчас восстанавливаем — НЕ трогаем treeScrollTop
     if (this.isRestoring) return;
 
     const nextTop = el.scrollTop;
 
-    // 🛡️ ноль часто “временный” при reveal/пересборке дерева
     if (nextTop === 0 && this.treeScrollTop > 0) {
       const expectedPrev = this.treeScrollTop;
 
       requestAnimationFrame(() => {
-        // если за кадр оно “отлипло” — значит 0 был мусор
         if (!this.treeScrollEl) return;
         if (this.isRestoring) return;
 
         const stableTop = this.treeScrollEl.scrollTop;
 
-        // принимаем 0 только если он реально стабилен
         if (stableTop === 0) {
           this.treeScrollTop = 0;
         } else {
-          // оставляем старое значение, ничего не делаем
-          // (или можно обновить на stableTop, но лучше оставить как есть)
-          // this.treeScrollTop = stableTop;
           this.treeScrollTop = expectedPrev;
         }
       });
@@ -260,31 +247,11 @@ export class TreeScrollKeeper {
       this.attachTreeScrollListener();
 
       const el = this.getTreeScrollEl();
-      console.log("Restoring scroll...", this.treeScrollTop);
       if (el) this.restoreScroll(el, this.treeScrollTop);
     }
 
     if (nextMode === "outline") {
       this.detachTreeScrollListener();
     }
-
-    // if (
-    //   (prevMode === "folders-tree" && nextMode !== "search") ||
-    //   (nextMode !== "folders-tree" && prevMode === "search")
-    // ) {
-    //   const el = this.getTreeScrollEl();
-    //   if (el) this.restoreScroll(el, this.treeScrollTop);
-    // }
-
-    // if (["folders-tree", "search"].includes(prevMode)) {
-    //   this.detachTreeScrollListener();
-    // }
-
-    // if (["folders-tree", "search"].includes(nextMode)) {
-    //   this.attachTreeScrollListener();
-
-    //   const el = this.getTreeScrollEl();
-    //   if (el) this.restoreScroll(el, this.treeScrollTop);
-    // }
   }
 }
