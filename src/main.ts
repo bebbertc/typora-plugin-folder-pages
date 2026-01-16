@@ -2,6 +2,7 @@ import "./style.scss";
 import { Plugin } from "@typora-community-plugin/core";
 import { FolderNode } from "./FolderNode";
 import { nodeIsFolder, NotionTreeMode } from "./NotionTreeMode";
+import { Sidebar } from "./Sidebar";
 
 export default class FolderNotesDebug extends Plugin {
   private NOTION_TREE_MODE_ON = true;
@@ -46,6 +47,9 @@ export default class FolderNotesDebug extends Plugin {
   onload() {
     // capture оставляем, но теперь мы гасим событие
     document.addEventListener("click", this.onClick, true);
+
+    const sidebar = new Sidebar();
+    sidebar.start();
 
     if (this.NOTION_TREE_MODE_ON) {
       const notionTreeMode = new NotionTreeMode();

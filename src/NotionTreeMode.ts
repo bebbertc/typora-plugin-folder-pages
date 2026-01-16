@@ -41,23 +41,6 @@ export class NotionTreeMode {
     this.docMo.observe(document.body, { childList: true, subtree: true });
   }
 
-  stop() {
-    if (!this.started) return;
-    this.started = false;
-
-    if (this.raf) cancelAnimationFrame(this.raf);
-    this.raf = 0;
-
-    this.mo?.disconnect();
-    this.mo = null;
-
-    this.docMo?.disconnect();
-    this.docMo = null;
-
-    const tree = document.querySelector<HTMLElement>(this.rootSelector);
-    if (tree) this.clearActiveFolder(tree);
-  }
-
   private scheduleApply() {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = requestAnimationFrame(() => {
