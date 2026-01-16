@@ -1,10 +1,12 @@
+// Подсвечивает в боковой панели папку, соответствующую открытому файлу
+
 import * as path from "path";
 
 export function nodeIsFolder(folderEl: HTMLElement): boolean {
   return folderEl.getAttribute("data-is-directory") === "true";
 }
 
-export class NotionTreeMode {
+export class ActiveFolderHighlighter {
   private rootSelector = "#file-library-tree";
   private raf = 0;
 
@@ -15,6 +17,27 @@ export class NotionTreeMode {
 
   // запоминаем, какую папку пометили active, чтобы аккуратно снять
   private activeFolderPath: string | null = null;
+
+  stop() {
+    // идемпотентность
+    if (!this.started) return;
+    this.started = false;
+
+    // raf
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0;
+
+    // observers
+    this.mo?.disconnect();
+    this.mo = null;
+
+    this.docMo?.disconnect();
+    this.docMo = null;
+
+    // убрать active, который мы могли повесить на папку
+    const tree = document.querySelector<HTMLElement>(this.rootSelector);
+    if (tree) this.clearActiveFolder(tree);
+  }
 
   start() {
     if (this.started) return;
@@ -53,41 +76,8 @@ export class NotionTreeMode {
     const tree = document.querySelector<HTMLElement>(this.rootSelector);
     if (!tree) return;
 
-    // 1) Применяем notion-hide: скрываем файлы и assets
-    const folders = Array.from(tree.querySelectorAll<HTMLElement>(".file-library-node")).filter(
-      (el) => nodeIsFolder(el),
-    );
-    folders.forEach((folder) => this.applyToFolder(folder));
-
     // 2) Подсветка активной “папки-страницы”: переносим active с файла на папку
     this.syncActiveFolder(tree);
-  }
-
-  private applyToFolder(folderEl: HTMLElement) {
-    const childrenNode = folderEl.querySelector<HTMLElement>(".file-node-children");
-    if (!childrenNode) return;
-
-    // 1) Скрываем все файлы внутри папки
-    const files = Array.from(
-      childrenNode.querySelectorAll<HTMLElement>(
-        ':scope > .file-library-node[data-is-directory="false"]',
-      ),
-    );
-    files.forEach((el) => {
-      el.style.display = "none";
-    });
-
-    // 2) Скрываем папку assets (как сервисную)
-    const subFolders = Array.from(
-      childrenNode.querySelectorAll<HTMLElement>(
-        ':scope > .file-library-node[data-is-directory="true"]',
-      ),
-    );
-    subFolders.forEach((folder) => {
-      const titleEl = folder.querySelector(".file-node-title-name-part");
-      const title = titleEl?.textContent?.trim() || "";
-      if (title === "assets") folder.style.display = "none";
-    });
   }
 
   private syncActiveFolder(tree: HTMLElement) {

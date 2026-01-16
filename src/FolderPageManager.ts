@@ -1,34 +1,10 @@
+// Отвечает за открытие md файлов при открытии папки и работу с папками-страницами.
+
 import * as path from "path";
 import * as fs from "fs";
+import { TreeScrollKeeper } from "./TreeScrollKeeper";
 
 type Path = string;
-
-function findScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let cur: HTMLElement | null = el;
-  while (cur) {
-    const style = getComputedStyle(cur);
-    const overflowY = style.overflowY;
-    const isScrollable =
-      (overflowY === "auto" || overflowY === "scroll") && cur.scrollHeight > cur.clientHeight;
-
-    if (isScrollable) return cur;
-    cur = cur.parentElement;
-  }
-  return null;
-}
-
-function restoreScroll(scrollEl: HTMLElement, top: number) {
-  // Typora может сбросить scroll несколько раз подряд — восстанавливаем несколько кадров
-  let frames = 0;
-
-  const tick = () => {
-    scrollEl.scrollTop = top;
-    frames += 1;
-    if (frames < 10) requestAnimationFrame(tick);
-  };
-
-  requestAnimationFrame(tick);
-}
 
 function setObserver(
   root: Node,
@@ -64,11 +40,14 @@ function setObserver(
   });
 }
 
-export class FolderNode {
+export class FolderPageManager {
   private opening = false;
   private folderName: string | null = null;
 
-  constructor(private readonly folderPath: Path) {
+  constructor(
+    private readonly folderPath: Path,
+    private readonly scroll: TreeScrollKeeper | null = null,
+  ) {
     this.folderName = path.basename(this.folderPath);
   }
 
@@ -116,15 +95,11 @@ export class FolderNode {
     const title =
       (firstMdNode.querySelector(".file-node-title") as HTMLElement | null) ?? firstMdNode;
 
-    // ✅ сохраняем scroll контейнера дерева
-    const tree = this.treeRoot();
-    const scrollEl = findScrollParent(tree);
-    const top = scrollEl?.scrollTop ?? 0;
-
-    this.clickElement(title);
-
-    // ✅ восстанавливаем scroll после открытия/перерендера
-    if (scrollEl) restoreScroll(scrollEl, top);
+    if (this.scroll) {
+      this.scroll.runPreservingScroll(() => this.clickElement(title));
+    } else {
+      this.clickElement(title);
+    }
 
     return true;
   }
@@ -168,9 +143,6 @@ export class FolderNode {
       },
       {
         subtree: true,
-        // Typora может:
-        // 1) поменять class на существующей ноде (attributes)
-        // 2) пересоздать ноду папки целиком (childList)
         attributes: true,
         attributeFilter: ["class"],
         childList: true,

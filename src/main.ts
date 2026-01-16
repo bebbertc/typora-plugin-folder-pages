@@ -1,10 +1,16 @@
 import "./style.scss";
 import { Plugin } from "@typora-community-plugin/core";
-import { FolderNode } from "./FolderNode";
-import { nodeIsFolder, NotionTreeMode } from "./NotionTreeMode";
-import { Sidebar } from "./Sidebar";
+import { FolderPageManager } from "./FolderPageManager";
+import { nodeIsFolder, ActiveFolderHighlighter } from "./ActiveFolderHighlighter";
+import { TreeScrollKeeper } from "./TreeScrollKeeper";
+import { NotionTreeLayout } from "./NotionTreeLayout";
+
+export const debugEmoji = "🐛";
 
 export default class FolderNotesDebug extends Plugin {
+  private treeScrollKeeper: TreeScrollKeeper | null = null;
+  private activeFolderHighlighter: ActiveFolderHighlighter | null = null;
+  private notionTreeLayout: NotionTreeLayout | null = null;
   private NOTION_TREE_MODE_ON = true;
 
   getFolderNodeFromTarget(target: HTMLElement): HTMLElement | null {
@@ -34,30 +40,41 @@ export default class FolderNotesDebug extends Plugin {
     const folderNode = this.getFolderNodeFromTarget(target);
     if (!folderNode) return;
 
-    // ⚠️ ВАЖНО: мы забираем клик себе, Typora не должна делать toggle сама, никакие другие события не должны сработать
+    // ВАЖНО: мы забираем клик себе, Typora не должна делать toggle сама, никакие другие события не должны сработать
     e.preventDefault();
     e.stopPropagation();
     (e as any).stopImmediatePropagation?.();
 
     const FOLDER_NODE_PATH = folderNode.getAttribute("data-path")!;
-    const folder = new FolderNode(FOLDER_NODE_PATH);
-    void folder.expandAndOpenFirstMd();
+    const folderPageManager = new FolderPageManager(FOLDER_NODE_PATH, this.treeScrollKeeper);
+    void folderPageManager.expandAndOpenFirstMd();
   };
 
   onload() {
-    // capture оставляем, но теперь мы гасим событие
-    document.addEventListener("click", this.onClick, true);
+    this.treeScrollKeeper = new TreeScrollKeeper();
+    this.treeScrollKeeper.start();
 
-    const sidebar = new Sidebar();
-    sidebar.start();
+    this.activeFolderHighlighter = new ActiveFolderHighlighter();
+    this.activeFolderHighlighter.start();
 
     if (this.NOTION_TREE_MODE_ON) {
-      const notionTreeMode = new NotionTreeMode();
-      notionTreeMode.start();
+      this.notionTreeLayout = new NotionTreeLayout();
+      this.notionTreeLayout.start();
     }
+
+    document.addEventListener("click", this.onClick, true);
   }
 
   onunload() {
     document.removeEventListener("click", this.onClick, true);
+
+    this.notionTreeLayout?.stop();
+    this.notionTreeLayout = null;
+
+    this.activeFolderHighlighter?.stop();
+    this.activeFolderHighlighter = null;
+
+    this.treeScrollKeeper?.stop();
+    this.treeScrollKeeper = null;
   }
 }
